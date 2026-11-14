@@ -255,6 +255,16 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{ __html: `(function(){try{var a=${JSON.stringify(FIRST_RUN_ALLOWED)};var p=location.pathname.replace(/[/]+$/,'')||'/';if(!a.some(function(x){return p===x||p.indexOf(x+'/')===0;}))return;var s=null;try{s=sessionStorage.getItem(${JSON.stringify(FIRST_RUN_SCHEME_KEY)});}catch(e){}var l=s==='light';var c=document.documentElement.classList;c.toggle('light',l);c.toggle('dark',!l);}catch(e){}})()` }}
         />
+        {/* The desktop shell hides the window's title bar and floats the
+            traffic lights over the page, so the interface reserves that strip
+            itself (`html[data-desktop]`, globals.css: the header's safe-area
+            spacer grows to a title bar and becomes the drag handle). The user
+            agent is the only signal the shell leaves: it is Electron's
+            Chromium, and a browser never matches. Set before the first paint,
+            or the strip would push the header down after it. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: `(function(){try{if(navigator.userAgent.indexOf('Electron')!==-1)document.documentElement.setAttribute('data-desktop','');}catch(e){}})()` }}
+        />
       </head>
       <body>
         {/* The dictionary's chunk may still be on its way when the page
