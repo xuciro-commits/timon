@@ -11,11 +11,10 @@
  * that is not costs more than a refused start.
  */
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalizeIds } from '../kernel/legacy-ids.js';
-import { TIMON_HOME } from '../paths.js';
+import { TIMON_HOME, expandPath } from '../paths.js';
 import { isLoopbackHost } from '../users/setup-token.js';
 import { CONFIG_VERSION, TimonConfigSchema, type TimonConfig } from './schema.js';
 
@@ -42,11 +41,10 @@ function mergeDeep(base: Json, over: Json): Json {
   return out;
 }
 
-/** Replaces a leading `~` with the user's home. */
+/** Replaces a leading `~` with the user's home (`paths.ts` holds the rule, so
+ *  the agent config reader expands the same way). */
 export function expandTilde(p: string): string {
-  if (p === '~') return homedir();
-  if (p.startsWith('~/')) return join(homedir(), p.slice(2));
-  return p;
+  return expandPath(p);
 }
 
 /** `presets/` folder — looked up by walking up from this file, to work

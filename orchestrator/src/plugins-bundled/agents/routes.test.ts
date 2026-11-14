@@ -480,6 +480,22 @@ test('agents without cwd can be created and saved; invalid directories remain re
 });
 
 
+test('a cwd typed with ~ is expanded before it is checked and stored', async () => {
+  // `~` is a shell spelling: the literal string fails `existsSync`, so a user
+  // typing `~/Projects` was refused on every save — and the editor posts the
+  // stored cwd back, so the agent could never be saved again.
+  const { homedir } = await import('node:os');
+  const { agentConfig } = await import('../../paths.js');
+  const body = { name: 'tilde-cwd.agent', system_prompt: 'Initial', config: { cwd: '~', role: 'orchestrator' } };
+  const create = await call('POST', '/api/agents', { cookie: adminCookie, body });
+  assert.equal(create.status, 200);
+  assert.equal(JSON.parse(readFileSync(agentConfig('tilde-cwd.agent'), 'utf8')).cwd, homedir());
+  const patched = await call('PATCH', '/api/agents/tilde-cwd.agent/config', { cookie: adminCookie, body: { cwd: '~' } });
+  assert.equal(patched.status, 200);
+  const agent = await call('GET', '/api/agents/tilde-cwd.agent', { cookie: adminCookie });
+  assert.equal((agent.json as { cwd: string | null }).cwd, homedir());
+});
+
 test('built-in prompt overrides persist, preserve identity and reset to shipped defaults', async () => {
   const { getRole, ROLE_REGISTRY, createRole, updateRole, deleteRole } = await import('../../agent-roles.js');
   const { BUILTIN_ROLE_OVERRIDES_FILE } = await import('../../paths.js');
