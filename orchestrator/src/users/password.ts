@@ -37,7 +37,16 @@ export function generateTemporaryPassword(): string {
   return randomBytes(18).toString('base64url');
 }
 
-export function verifyPassword(password: string, encoded: string): boolean {
+/**
+ * `encoded` is typed as `unknown` because it arrives from the
+ * `users.password_hash` TEXT column, which an older driver, a restored dump or
+ * a hand edit can have filled with a BLOB; the row then reads back as a Buffer
+ * and `.split` throws, turning a login into a 500 instead of a refused
+ * credential. A body that is not a string is not a hash this build wrote, so it
+ * fails the check like any other malformed one — never the request.
+ */
+export function verifyPassword(password: string, encoded: unknown): boolean {
+  if (typeof encoded !== 'string') return false;
   const parts = encoded.split('$');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
   const n = Number(parts[1]);

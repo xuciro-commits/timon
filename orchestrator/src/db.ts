@@ -4393,7 +4393,10 @@ export type UserRow = {
   id: string;
   email: string;
   name: string;
-  password_hash: string;
+  /** `unknown` on purpose: a TEXT column can hold a BLOB (an older driver, a
+   *  restored dump), and every reader must refuse it rather than call string
+   *  methods on it (`verifyPassword`). */
+  password_hash: unknown;
   status: UserStatus;
   is_superadmin: boolean;
   created_at: number;

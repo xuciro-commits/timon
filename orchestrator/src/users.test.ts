@@ -24,6 +24,16 @@ test('hashPassword then verifyPassword round-trips, a wrong password does not', 
   assert.equal(verifyPassword('correct-horse-battery', 'scrypt$1$1$1$$'), false);
 });
 
+test('a stored hash that is not a string is refused instead of throwing', () => {
+  const hash = hashPassword('correct-horse-battery');
+  // A `password_hash` TEXT column can hold a BLOB (an older driver, a restored
+  // dump), and better-sqlite3 then hands back a Buffer: the login must answer
+  // "wrong credentials", not fail with a 500 on `.split`.
+  assert.equal(verifyPassword('correct-horse-battery', Buffer.from(hash)), false);
+  assert.equal(verifyPassword('correct-horse-battery', null), false);
+  assert.equal(verifyPassword('correct-horse-battery', undefined), false);
+});
+
 test('the same password hashes to two different strings (fresh salt)', () => {
   const a = hashPassword('same-password');
   const b = hashPassword('same-password');
