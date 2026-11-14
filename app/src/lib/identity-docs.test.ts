@@ -10,6 +10,7 @@ import { docNameOf, orderedDocs } from '../components/agent-editor/identity-docs
 test('a typed doc name becomes a valid .md file name, or nothing', () => {
   assert.equal(docNameOf('charter'), 'charter.md');
   assert.equal(docNameOf(' rules.md '), 'rules.md');
+  assert.equal(docNameOf('备注'), '备注.md');
   assert.equal(docNameOf('bad name'), null);
   assert.equal(docNameOf('  '), null);
 });

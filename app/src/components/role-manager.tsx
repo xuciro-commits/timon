@@ -233,7 +233,7 @@ export function RoleManager({ roles, onChanged }: { roles: Role[]; onChanged: ()
             </Button>
             {custom.length > 0 && (
               <div>
-                <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Custom</p>
+                <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">{t('roles.custom')}</p>
                 <div className="flex flex-col gap-1">
                   {custom.map((r) => (
                     <div key={r.id} className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5">
@@ -273,12 +273,12 @@ export function RoleManager({ roles, onChanged }: { roles: Role[]; onChanged: ()
                   value={draft.id}
                   disabled={draft.existing}
                   onChange={(e) => setDraft({ ...draft, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                  placeholder="e.g. designer"
+                  placeholder={t('roles.idPlaceholder')}
                 />
               </div>
               <div className="flex-1">
                 <label className="mb-1 block text-[11px] text-muted-foreground">{t('roles.label')}</label>
-                <Input className="text-[12px]" value={draft.label} disabled={isBuiltin} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Designer" />
+                <Input className="text-[12px]" value={draft.label} disabled={isBuiltin} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder={t('roles.labelPlaceholder')} />
               </div>
               <div>
                 <label className="mb-1 block text-[11px] text-muted-foreground">{t('roles.color')}</label>
