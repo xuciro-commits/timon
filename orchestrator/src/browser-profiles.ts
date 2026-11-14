@@ -59,7 +59,7 @@ export function createBrowserProfile(input: CreateBrowserProfileInput, viewer?: 
   if (!['general', 'project', 'agent', 'custom'].includes(kind)) throw new Error('invalid browser profile scope');
   const ref = input.scope_ref ?? null;
   if ((kind === 'general' || kind === 'custom') && ref !== null) throw new Error('this browser profile scope does not accept a reference');
-  if ((kind === 'project' || kind === 'agent') && (typeof ref !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(ref))) throw new Error('browser profile scope requires a valid reference');
+  if ((kind === 'project' || kind === 'agent') && (typeof ref !== 'string' || !/^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,160}$/u.test(ref))) throw new Error('browser profile scope requires a valid reference');
   // A privileged viewer can inspect all rows, but cannot silently assign
   // credentials owned by somebody else to their own missions.
   const owner = input.owner_user_id === undefined ? viewer?.id ?? null : input.owner_user_id;
@@ -70,7 +70,7 @@ export function createBrowserProfile(input: CreateBrowserProfileInput, viewer?: 
   for (const key of ['agent_names', 'workflow_slugs'] as const) {
     const values = input.grants?.[key];
     if (values !== undefined) {
-      if (!Array.isArray(values) || values.length > 1000 || values.some((value) => typeof value !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(value))) throw new Error(`invalid browser profile ${key}`);
+      if (!Array.isArray(values) || values.length > 1000 || values.some((value) => typeof value !== 'string' || !/^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,160}$/u.test(value))) throw new Error(`invalid browser profile ${key}`);
       grants[key] = [...new Set(values)];
     }
   }

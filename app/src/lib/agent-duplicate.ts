@@ -10,9 +10,7 @@
  */
 
 import type { SkillAttachment } from './skill-attachments';
-
-/** Same alphabet as the daemon's `validName`. */
-export const AGENT_NAME_RE = /^[A-Za-z0-9._-]+$/;
+import { AGENT_NAME_RE } from './agent-name';
 
 export type DuplicateNameProblem = 'empty' | 'invalid' | 'taken';
 

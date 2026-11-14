@@ -131,7 +131,7 @@ test('every locale carries the same hidden keywords and they point at real tabs'
       for (const id of Object.keys(tabs)) assert.ok(known.has(`${category}.${id}`), `${name}: unknown tab ${category}.${id}`);
     }
   }
-  const keysOf = (dict: typeof en) => ({
+  const keysOf = (dict: { settingsSearch: typeof en.settingsSearch }) => ({
     tabs: Object.entries(dict.settingsSearch.tabKeywords).flatMap(([c, t]) => Object.keys(t).map((i) => `${c}.${i}`)).sort(),
     rows: Object.keys(dict.settingsSearch.rowKeywords).sort(),
   });

@@ -269,7 +269,7 @@ export function registerNativeBrowserRoutes(app: Router, deps: {
       return { profile };
     }
     const agentName = typeof req.query.agent === 'string' ? req.query.agent : undefined;
-    if (agentName && !/^[A-Za-z0-9._-]{1,128}$/.test(agentName)) throw new NativeBrowserError('Invalid agent.');
+    if (agentName && !/^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u.test(agentName)) throw new NativeBrowserError('Invalid agent.');
     const cfg = agentName ? loadConfig(agentName) : undefined;
     const project = resolveBrowserProject({ agentProject: cfg?.project, agentCwd: cfg?.cwd,
       requested: typeof req.query.project === 'string' ? req.query.project : null });

@@ -272,7 +272,8 @@ export function loadIdentityDocs(agentName: string): { name: string; content: st
   } catch { return []; }
 }
 
-const NAME_RE = /^[A-Za-z0-9._-]+$/;
+/** Letters (any script, including CJK), digits, '.', '_' and '-'. */
+const NAME_RE = /^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]+$/u;
 
 export function validName(name: string): void {
   if (!NAME_RE.test(name)) throw new Error(`invalid agent name: ${name}`);

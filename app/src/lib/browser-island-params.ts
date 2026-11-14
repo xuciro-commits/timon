@@ -1,6 +1,6 @@
 import type { IslandParams } from '@/lib/island-tree';
 
-const AGENT = /^[A-Za-z0-9._-]{1,128}$/;
+const AGENT = /^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u;
 const MISSION = /^[A-Za-z0-9-]{1,64}$/;
 
 /** `{ agent, mission, display }`. A `profile` handed by a source is dropped: the daemon

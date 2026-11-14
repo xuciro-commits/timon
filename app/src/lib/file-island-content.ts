@@ -14,7 +14,7 @@ export function fileIslandContent(agentId: string, path: string, { external = fa
 }
 
 /** Same shape as the daemon's agent name segment. */
-const AGENT = /^[A-Za-z0-9._-]{1,128}$/;
+const AGENT = /^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u;
 /** Leaves room for the other params under the 1 KiB a tab may store. */
 const MAX_PATH = 900;
 

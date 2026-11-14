@@ -9,7 +9,7 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { createRole, deleteRole, listRoles, getRole, resetRoleDirectives, updateRole } from '../../agent-roles.js';
-import { canonicalAgentName, createEphemeralAgent, deleteAgent, getAgent, restoreAgent, setAgentOrchestrates, teamVisibleAgents, clientTurnState, getTurnState, isAutonomousMission, killRunningForAgent, listAgents, loadConfig, patchAgentConfig, renamedTriggerReason, spawnAgent, upsertAgent } from '../../agent.js';
+import { canonicalAgentName, createEphemeralAgent, deleteAgent, getAgent, restoreAgent, setAgentOrchestrates, teamVisibleAgents, clientTurnState, getTurnState, isAutonomousMission, killRunningForAgent, listAgents, loadConfig, patchAgentConfig, renamedTriggerReason, spawnAgent, upsertAgent, validName } from '../../agent.js';
 import { config } from '../../config/load.js';
 import { dropTrashedAgentBrowserProfiles, resolveBrowserProfile } from '../../browser-profiles.js';
 import { resolveBrowserProject } from '../../browser-project.js';
@@ -875,6 +875,7 @@ export function registerRoutes(app: express.IRouter): void {
       return;
     }
     try {
+      validName(body.name!);
       validateCwd(body.config?.cwd);
       validateBrowserAssignment(req, body.name, body.config ?? {});
       if (body.config && 'reports_to' in body.config) {

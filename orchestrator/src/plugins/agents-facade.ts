@@ -92,7 +92,7 @@ export type ScopedAgents = {
 
 /** Agents created by plugins never take a name starting with `_` or `.`:
  *  `_main` and the `_eph-*` agents are the daemon's own. */
-const NameSchema = z.string().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, 'invalid agent name');
+const NameSchema = z.string().min(1).max(100).regex(/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}._-]*$/u, 'invalid agent name');
 
 const FieldsSchema = z.object({
   systemPrompt: z.string().max(200_000),

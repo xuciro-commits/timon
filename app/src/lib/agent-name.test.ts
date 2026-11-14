@@ -5,7 +5,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toAgentName } from './agent-name';
+import { AGENT_NAME_RE, toAgentName } from './agent-name';
 
 test('a typed display name becomes a valid agent name', () => {
   assert.equal(toAgentName('Nova'), 'Nova');
@@ -13,4 +13,12 @@ test('a typed display name becomes a valid agent name', () => {
   assert.equal(toAgentName('  Éléa  '), 'Elea');
   assert.equal(toAgentName('a'.repeat(60)).length, 48);
   assert.equal(toAgentName('***'), '');
+});
+
+test('Chinese names survive conversion and validate', () => {
+  assert.equal(toAgentName('新代理'), '新代理');
+  assert.equal(toAgentName('Nova 中文'), 'Nova-中文');
+  assert.equal(AGENT_NAME_RE.test('新代理'), true);
+  assert.equal(AGENT_NAME_RE.test('my agent'), false);
+  assert.equal(AGENT_NAME_RE.test('..'), false);
 });

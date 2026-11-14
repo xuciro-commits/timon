@@ -12,14 +12,16 @@ export const SYSTEM_PROMPT_DOC = 'system-prompt.md';
 
 /** Files worth adding, offered while they do not exist. Every `.md` of the
  *  agent is sent to the model, so each one is a real lever, not a note. */
-export const DOC_SUGGESTIONS: { name: string; template: string }[] = [
-  { name: 'SOUL.md', template: '# Who you are\n\nName, personality, values, how you talk to the people you work with.\n' },
-  { name: 'charter.md', template: '# Charter\n\n## Mission\n\nWhat you are here to do.\n\n## Out of scope\n\nWhat you never do, and who to hand it to.\n' },
-  { name: 'rules.md', template: '# Rules\n\n- A hard rule you always follow.\n- Another one.\n' },
-  { name: 'style.md', template: '# Style\n\n- Language and tone.\n- How long an answer should be.\n- Formats you use (lists, tables, code blocks).\n' },
-  { name: 'glossary.md', template: '# Glossary\n\n- **Term** — what it means here.\n' },
-  { name: 'examples.md', template: '# Examples\n\n## A request\n\n> What the user says.\n\n## A good answer\n\nWhat you reply.\n' },
-];
+export function docSuggestions(): { name: string; template: string }[] {
+  return [
+    { name: 'SOUL.md', template: t('identityDocs.templates.soul') },
+    { name: 'charter.md', template: t('identityDocs.templates.charter') },
+    { name: 'rules.md', template: t('identityDocs.templates.rules') },
+    { name: 'style.md', template: t('identityDocs.templates.style') },
+    { name: 'glossary.md', template: t('identityDocs.templates.glossary') },
+    { name: 'examples.md', template: t('identityDocs.templates.examples') },
+  ];
+}
 
 const same = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
@@ -28,7 +30,7 @@ export function docNameOf(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const name = trimmed.toLowerCase().endsWith('.md') ? trimmed : `${trimmed}.md`;
-  return /^[\w.-]+\.md$/.test(name) ? name : null;
+  return /^[\p{L}\p{M}\p{N}._-]+\.md$/u.test(name) ? name : null;
 }
 
 /** The list of docs the agent has, `system-prompt.md` first, then `SOUL.md`, then by name. */
@@ -65,7 +67,7 @@ export function IdentityDocs({ agent, systemPrompt, onSystemPrompt, docs, onDoc,
   const names = orderedDocs(Object.keys(docs));
   const shown = names.includes(active) ? active : SYSTEM_PROMPT_DOC;
   const text = shown === SYSTEM_PROMPT_DOC ? systemPrompt : docs[shown] ?? '';
-  const missing = DOC_SUGGESTIONS.filter((s) => !names.some((n) => same(n, s.name)));
+  const missing = docSuggestions().filter((s) => !names.some((n) => same(n, s.name)));
 
   const pick = (name: string) => { setActive(name); setEditing(false); };
   const create = async (name: string, template: string) => {

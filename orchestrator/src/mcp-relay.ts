@@ -39,7 +39,7 @@ export { MCP_RELAY_HEADER, MCP_RELAY_PREFIX, isMcpRelayRoute, mcpRelayRoute } fr
 const KEY_STORE = '@timon/mcp-relay';
 const KEY_NAME = '@settings/relay-key';
 
-const AGENT_RE = /^[A-Za-z0-9._-]+$/;
+const AGENT_RE = /^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]+$/u;
 const MISSION_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 export function isMcpRelayAgent(value: string): boolean {

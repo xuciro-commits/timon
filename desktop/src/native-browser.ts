@@ -132,7 +132,7 @@ export interface NativeBrowserEngineOptions {
 }
 
 const isQueued = (capture: AnnotationCapture): capture is QueuedCapture => (capture as Partial<QueuedCapture>).queued === true;
-const AGENT_NAME = /^[A-Za-z0-9._-]{1,128}$/;
+const AGENT_NAME = /^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u;
 const MISSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The conversation an attach names, or null: the daemon checks it again before posting anything. */

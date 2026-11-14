@@ -11,7 +11,7 @@ export const CHAT_ISLAND_KEY = 'chat';
 export const CHAT_ISLAND_TYPE = `@timon/missions:${CHAT_ISLAND_KEY}`;
 
 // The daemon's own rule for an agent name (`agent-config.ts`).
-const AGENT = /^[A-Za-z0-9._-]{1,128}$/;
+const AGENT = /^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u;
 const MISSION = /^[A-Za-z0-9_.:-]{1,128}$/;
 
 /**

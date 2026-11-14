@@ -52,7 +52,10 @@ function resolveProjectCwd(slug: string): string | null {
 const pathSegment = (max: number) => z.string().min(1).max(max).regex(/^[A-Za-z0-9._-]+$/)
   .refine((s) => s !== '.' && s !== '..', { message: 'invalid name' });
 const SLUG = pathSegment(64);
-const AGENT_NAME = pathSegment(128);
+// Agent names may be in any script (the agent editor accepts Chinese); the
+// same traversal rule still applies.
+const AGENT_NAME = z.string().min(1).max(128).regex(/^[\p{L}\p{M}\p{N}._-]+$/u)
+  .refine((s) => s !== '.' && s !== '..', { message: 'invalid name' });
 const BRANCH = z.string().max(255).refine(validBranchName, { message: 'invalid branch name' });
 
 const AgentParams = z.object({ name: AGENT_NAME }).strict();

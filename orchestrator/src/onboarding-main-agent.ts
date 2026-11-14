@@ -65,15 +65,15 @@ export type MainAgentInput = z.infer<typeof MainAgentSchema>;
 /**
  * A display name typed by a human → a valid agent name.
  *
- * Agent names are a filesystem identity (`^[A-Za-z0-9._-]+$`), so "Nova the
- * assistant" cannot be one. We convert rather than refuse: the screen shows
- * the result, and refusing a space would be a rule the user has no way to
- * guess.
+ * Agent names are a filesystem identity (letters from any script, digits,
+ * '.', '_' and '-'), so "Nova the assistant" cannot be one verbatim. We
+ * convert rather than refuse: the screen shows the result, and refusing a
+ * space would be a rule the user has no way to guess.
  */
 export function toAgentName(raw: string): string {
   return raw
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/[^\p{L}\p{M}\p{N}._-]+/gu, '-')
     .replace(/-{2,}/g, '-')
     .replace(/^[-.]+|[-.]+$/g, '')
     .slice(0, 48);

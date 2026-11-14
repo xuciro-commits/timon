@@ -75,6 +75,8 @@ test('a typed display name becomes a valid agent name', () => {
   assert.equal(toAgentName('Nova'), 'Nova');
   assert.equal(toAgentName('Nova, mon assistante'), 'Nova-mon-assistante');
   assert.equal(toAgentName('  Éléa  '), 'Elea');
+  assert.equal(toAgentName('新代理'), '新代理');
+  assert.equal(toAgentName('Nova 中文'), 'Nova-中文');
   assert.equal(toAgentName('***'), '', 'nothing usable left is an empty name, not a bad one');
 });
 

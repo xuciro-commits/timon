@@ -56,7 +56,7 @@ const CommentBody = z.object({ comment: z.string().max(ANNOTATION_COMMENT_MAX * 
 const SendBody = z.object({
   ids: z.array(AnnotationParam).min(1).max(MAX_ANNOTATIONS_PER_BATCH),
   missionId: z.string().uuid().optional(),
-  agent: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional(),
+  agent: z.string().regex(/^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u).optional(),
   /** The composer attaches the thumbnails to the turn: they come back with the handoff. */
   withImages: z.boolean().optional(),
 }).strict().refine((body) => !!body.missionId !== !!body.agent, 'Name either the mission or the agent the annotations go to.');
@@ -66,7 +66,7 @@ const PostBody = z.object({
   all: z.literal(true).optional(),
   message: z.string().max(POST_MESSAGE_MAX).optional(),
   /** The conversation the browser is open for: its agent, and its mission when it has one. */
-  agent: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),
+  agent: z.string().regex(/^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u),
   missionId: z.string().uuid().optional(),
   /** The chat is on "New conversation": without a mission, start a fresh session instead of the agent's latest. */
   fresh: z.literal(true).optional(),

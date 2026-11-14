@@ -42,11 +42,11 @@ export async function deleteAgentAfterConfirm(name: string, opts: { onRestored?:
         },
       });
     } else {
-      toast.success('Deleted ' + name);
+      toast.success(t('agentTrash.purged', { name }));
     }
     return true;
   } catch (e) {
-    toast.error('Delete failed: ' + String((e as Error).message || e).slice(0, 80));
+    toast.error(t('agentTrash.actionError', { error: String((e as Error).message || e).slice(0, 80) }));
     return false;
   }
 }

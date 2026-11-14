@@ -33,7 +33,7 @@ const ProfileParam = z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
 const RecordingParam = z.string().regex(/^br-[0-9a-f-]{36}$/);
 const ControlBody = z.object({ clientId: z.string().regex(/^[a-zA-Z0-9_-]{8,128}$/).optional() }).strict();
 const LearnBody = z.object({
-  agent: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional(),
+  agent: z.string().regex(/^(?!\.\.?$)[\p{L}\p{M}\p{N}._-]{1,128}$/u).optional(),
   // The final submission of the learned flow is an external action: confirmed unless chosen here.
   autoSubmit: z.boolean().optional(),
 }).strict();

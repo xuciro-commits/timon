@@ -30,6 +30,7 @@ import { PermissionModeField } from './permission-mode-field';
 import { AgentApprovals } from '@/components/agent-editor/agent-approvals';
 import { BackendLimitsBadge } from '@/components/backend-limits-badge';
 import { t } from '@/lib/i18n';
+import { AGENT_NAME_RE } from '@/lib/agent-name';
 import { renameFollowUps } from '@/lib/agent-rename';
 import { TRIGGERS_ROUTE } from '@/plugins-client/triggers/model';
 import { BRAND } from '@/lib/brand';
@@ -118,6 +119,13 @@ type RoleResolution = {
 /** Task types the daemon resolves an agent for. `doc` is out: those tasks go
  *  to the librarian, whatever the project. */
 const PROJECT_TASK_TYPES = ['code', 'review', 'merge', 'research', 'chore'] as const;
+const PROJECT_TASK_TYPE_LABEL: Record<string, string> = {
+  code: 'editPage.projectTaskTypeCode',
+  review: 'editPage.projectTaskTypeReview',
+  merge: 'editPage.projectTaskTypeMerge',
+  research: 'editPage.projectTaskTypeResearch',
+  chore: 'editPage.projectTaskTypeChore',
+};
 
 type RoleSpec = {
   id: string;
@@ -693,9 +701,9 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
             body,
           },
         );
-        if (!r.ok) throw new Error('save failed: ' + r.status);
+        if (!r.ok) throw new Error(String(r.status));
       } catch (e) {
-        toast.error(String((e as Error).message || e));
+        toast.error(t('editPage.docSaveFailed', { error: String((e as Error).message || e) }));
       }
     }, 800);
   }
@@ -707,11 +715,11 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
       return false;
     }
     if (!/^[\w.-]+\.md$/.test(name)) {
-      toast.error('Doc name must match [\\w.-]+\\.md');
+      toast.error(t('editPage.docNameInvalid'));
       return false;
     }
     if (name.toLowerCase() === 'system-prompt.md' || Object.keys(extraDocs).some((n) => n.toLowerCase() === name.toLowerCase())) {
-      toast.error('That doc already exists.');
+      toast.error(t('editPage.docExists'));
       return false;
     }
     try {
@@ -723,11 +731,11 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
           body: template,
         },
       );
-      if (!r.ok) throw new Error('create failed: ' + r.status);
+      if (!r.ok) throw new Error(String(r.status));
       setExtraDocs((d) => ({ ...d, [name]: template }));
       return true;
     } catch (e) {
-      toast.error(String((e as Error).message || e));
+      toast.error(t('editPage.docCreateFailed', { error: String((e as Error).message || e) }));
       return false;
     }
   }
@@ -747,7 +755,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
         return next;
       });
     } catch (e) {
-      toast.error(String((e as Error).message || e));
+      toast.error(t('editPage.docDeleteFailed', { error: String((e as Error).message || e) }));
     }
   }
 
@@ -769,7 +777,10 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(apiErrorMessage(body, r.statusText));
       await refetchProjectRoles(slug);
-      toast.success(agentName ? `${type} → ${agentName}` : `${type} unpinned`);
+      const typeLabel = PROJECT_TASK_TYPE_LABEL[type] ? t(PROJECT_TASK_TYPE_LABEL[type]) : type;
+      toast.success(agentName
+        ? t('editPage.projectRoleAssigned', { type: typeLabel, name: agentName })
+        : t('editPage.projectRoleUnpinned', { type: typeLabel }));
     } catch (e) {
       toast.error(String((e as Error).message || e).slice(0, 140));
     }
@@ -829,8 +840,8 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
 
   async function save() {
     if (!draft) return;
-    if (!draft.name || !/^[A-Za-z0-9._-]+$/.test(draft.name)) {
-      toast.error("Invalid name. Use letters, digits, '.', '_', '-'.");
+    if (!draft.name || !AGENT_NAME_RE.test(draft.name)) {
+      toast.error(t('editPage.nameInvalid'));
       return;
     }
     setSaving(true);
@@ -882,7 +893,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
         });
         if (!rr.ok) {
           const j = await rr.json().catch(() => ({}));
-          throw new Error('rename failed: ' + (apiErrorMessage(j, rr.statusText)));
+          throw new Error(t('editPage.renameFailed', { error: apiErrorMessage(j, rr.statusText) }));
         }
         // Before the save below: the rename is done and stays done if that one fails.
         const followUps = renameFollowUps(await rr.json().catch(() => null));
@@ -903,7 +914,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
       });
       if (!r.ok) throw new Error(await r.text());
       await syncSkillAttachments(draft.name, draft.skills);
-      toast.success('Saved to ~/.timon/agents/' + draft.name + '/');
+      toast.success(t('editPage.savedTo', { name: draft.name }));
       announceAgentsChanged();
       const list = await fetchAll();
       const row = list.find((a) => a.name === draft.name);
@@ -918,7 +929,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
       }
       setDirty(false);
     } catch (e) {
-      toast.error('Save failed: ' + String((e as Error).message || e).slice(0, 80));
+      toast.error(t('editPage.saveFailed', { error: String((e as Error).message || e).slice(0, 80) }));
     } finally {
       setSaving(false);
     }
@@ -942,7 +953,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
   if (!draft || !selected) {
     return (
       <div className="grid h-full place-items-center text-[12.5px] text-muted-foreground">
-        Loading…
+        {t('common.loading')}
       </div>
     );
   }
@@ -982,7 +993,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
           >
             <AgentAvatar identity={draftIdentity} size="lg" roleBadge={false} />
           </button>
-          <h1 className="m-0 min-w-0 truncate text-[18px] font-semibold">{draft.name || 'New agent'}</h1>
+          <h1 className="m-0 min-w-0 truncate text-[18px] font-semibold">{draft.name || t('editPage.newAgent')}</h1>
           <div className="ml-auto flex items-center gap-2">
             {onClose && (
               <button
@@ -1053,7 +1064,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                   onChange={(e) => updateDraft('name', e.target.value)}
                 />
               </FormRow>
-              <FormRow label="Color" hint={t('editPage.colorHint')}>
+              <FormRow label={t('editPage.colorLabel')} hint={t('editPage.colorHint')}>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -1066,7 +1077,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                     /* code-font: hex colour value */ className="max-w-[140px] font-mono"
                     value={draft.color}
                     onChange={(e) => updateDraft('color', e.target.value)}
-                    placeholder="auto"
+                    placeholder={t('editPage.colorAuto')}
                   />
                   {draft.color.trim() && (
                     <Button
@@ -1076,14 +1087,14 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                       onClick={() => updateDraft('color', '')}
                       title={t('editPage.colorAutoTitle')}
                     >
-                      auto
+                      {t('editPage.colorAuto')}
                     </Button>
                   )}
                 </div>
               </FormRow>
               <FormRow
-                label="Role"
-                hint="sets the icon, injects its default directives (shown in Injections) and suggests model + permission_mode"
+                label={t('editPage.roleLabel')}
+                hint={t('editPage.roleHint')}
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Select
@@ -1091,11 +1102,11 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                     onValueChange={(v) => updateDraft('role', v === '__none__' ? '' : v)}
                   >
                     <SelectTrigger className="max-w-[280px]">
-                      <SelectValue placeholder="(none)" />
+                      <SelectValue placeholder={t('editPage.none')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">
-                        (none)
+                        {t('editPage.none')}
                       </SelectItem>
                       {roles.map((r) => (
                         <SelectItem key={r.id} value={r.id}>
@@ -1131,9 +1142,9 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                           setDirty(true);
                         }}
                         className="rounded-md border border-border bg-muted/40 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground"
-                        title={`suggested model: ${r.default_model} · permission_mode: ${r.default_permission_mode}`}
+                        title={t('editPage.suggestionTitle', { model: r.default_model, mode: r.default_permission_mode })}
                       >
-                        apply suggestions ({r.default_model} / {r.default_permission_mode})
+                        {t('editPage.applySuggestions', { model: r.default_model, mode: r.default_permission_mode })}
                       </button>
                     );
                   })()}
@@ -1141,7 +1152,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                 </div>
               </FormRow>
               <div className="flex flex-col gap-2">
-                <h2 className="text-[13px] font-semibold">Identity docs</h2>
+                <h2 className="text-[13px] font-semibold">{t('editPage.identityDocsTitle')}</h2>
                 <p className="text-[11.5px] text-muted-foreground">{t('identityDocs.intro')}</p>
                 <IdentityDocs
                   agent={selected?.name || null}
@@ -1205,7 +1216,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
             {/* Where the agent works: the directory its tools see, the
                 project it is grouped under, the browser profile it drives. */}
             <TabPanel active={tab === 'workspace'}>
-              <FormRow label="Working directory" hint="cwd for tool calls">
+              <FormRow label={t('editPage.workingDirectoryLabel')} hint={t('editPage.workingDirectoryHint')}>
                 <div className="flex gap-1.5">
                   <Input
                     /* code-font: file path */ className="font-mono"
@@ -1216,14 +1227,14 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                     variant="outline"
                     onClick={() => void browseCwd()}
                   >
-                    Browse…
+                    {t('editPage.browse')}
                   </Button>
                   {directoryPicker.dialog}
                 </div>
               </FormRow>
               <FormRow
-                label="Project"
-                hint="groups agents across the UI; auto-derived from cwd but you can override"
+                label={t('editPage.projectLabel')}
+                hint={t('editPage.projectHint')}
               >
                 <div className="flex items-center gap-2">
                   <Select
@@ -1231,11 +1242,11 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                     onValueChange={(v) => updateDraft('project', v === '__none__' ? '' : v)}
                   >
                     <SelectTrigger className="max-w-[240px]">
-                      <SelectValue placeholder="(none)" />
+                      <SelectValue placeholder={t('editPage.none')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">
-                        (none)
+                        {t('editPage.none')}
                       </SelectItem>
                       {draft.project && !projects.some((p) => p.slug === draft.project) && (
                         <SelectItem value={draft.project} className="text-muted-foreground">
@@ -1253,7 +1264,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                     <ProjectBadge project={draft.project} size="md" />
                   ) : (
                     <span className="text-[11.5px] text-muted-foreground/70">
-                      orphan agent — won't be grouped
+                      {t('editPage.orphanAgent')}
                     </span>
                   )}
                 </div>
@@ -1262,15 +1273,15 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                 <BrowserProfileSelect value={draft.browserProfileId} onChange={(value) => updateDraft('browserProfileId', value)} />
               </FormRow>
               <FormRow
-                label="Project tasks"
-                hint="who runs each kind of task on this agent's project — by role, not by name"
+                label={t('editPage.projectTasksLabel')}
+                hint={t('editPage.projectTasksHint')}
               >
                 {!draft.project ? (
                   <p className="text-[11.5px] text-muted-foreground/70">
-                    No project on this agent — nothing to dispatch to it.
+                    {t('editPage.projectTaskNoProject')}
                   </p>
                 ) : projectRoles === null ? (
-                  <p className="text-[11.5px] text-muted-foreground/70">Loading…</p>
+                  <p className="text-[11.5px] text-muted-foreground/70">{t('common.loading')}</p>
                 ) : (
                   <div className="rounded-lg border border-border bg-muted/20 p-1.5">
                     {PROJECT_TASK_TYPES.map((type) => {
@@ -1282,7 +1293,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                           key={type}
                           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11.5px]"
                         >
-                          <span className="w-16 shrink-0 text-muted-foreground">{type}</span>
+                          <span className="w-16 shrink-0 text-muted-foreground">{t(PROJECT_TASK_TYPE_LABEL[type] ?? type)}</span>
                           <span className={cn('min-w-0 flex-1 truncate', mine && 'text-primary')}>
                             {row.agent}
                           </span>
@@ -1293,13 +1304,17 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                             className="shrink-0 rounded border border-border bg-background/60 px-1.5 py-0.5 text-[9.5px] uppercase tracking-[0.1em] text-muted-foreground"
                             title={
                               row.source === 'pinned'
-                                ? 'pinned in the project roles'
+                                ? t('editPage.projectTaskPinned')
                                 : row.source === 'role'
-                                  ? 'carries the role'
-                                  : 'nobody holds this role — will be created on the first task'
+                                  ? t('editPage.projectTaskByRole')
+                                  : t('editPage.projectTaskConvention')
                             }
                           >
-                            {row.source}
+                            {row.source === 'pinned'
+                              ? t('editPage.projectTaskSourcePinned')
+                              : row.source === 'role'
+                                ? t('editPage.projectTaskSourceRole')
+                                : t('editPage.projectTaskSourceConvention')}
                           </span>
                           {mine && row.source === 'pinned' ? (
                             <button
@@ -1307,7 +1322,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                               onClick={() => pinProjectRole(type, '')}
                               className="shrink-0 text-[10.5px] text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground"
                             >
-                              unpin
+                              {t('editPage.unpin')}
                             </button>
                           ) : mine ? null : (
                             <button
@@ -1316,37 +1331,33 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
                               disabled={!selected?.name || dirty}
                               title={
                                 dirty
-                                  ? 'Save the agent first'
-                                  : `Send ${type} tasks of ${draft.project} to ${draft.name}`
+                                  ? t('editPage.projectTaskSaveFirst')
+                                  : t('editPage.projectTaskAssignTitle', { type, project: draft.project, name: draft.name })
                               }
                               className="shrink-0 text-[10.5px] text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-40 disabled:no-underline"
                             >
-                              assign here
+                              {t('editPage.assignHere')}
                             </button>
                           )}
                         </div>
                       );
                     })}
                     <p className="px-2 pb-0.5 pt-1 text-[10.5px] text-muted-foreground/70">
-                      Give this agent the matching role and it is picked up
-                      automatically, whatever its name. Pin only to settle a tie
-                      between two agents of the same role.
+                      {t('editPage.projectTaskAssignHint')}
                     </p>
                   </div>
                 )}
               </FormRow>
-              <FormRow label="Global context">
+              <FormRow label={t('editPage.globalContextLabel')}>
                 <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-3.5 py-3">
                   <Switch
                     checked={draft.globalContext}
                     onCheckedChange={(v) => updateDraft('globalContext', v)}
                   />
                   <div className="leading-tight">
-                    <div className="text-[13px] font-medium">Inject cross-project digest</div>
+                    <div className="text-[13px] font-medium">{t('editPage.injectDigestTitle')}</div>
                     <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-                      adds your hottest projects + objectives to the system prompt at spawn.
-                      Enable for <code>_main</code> and standalone “life” agents that orchestrate
-                      priorities across projects.
+                      {t('editPage.injectDigestHint')}
                     </div>
                   </div>
                 </label>
@@ -1368,21 +1379,21 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
               {permissionHint && !ownPermissions && (
                 <p className="mb-3 text-[12px] text-muted-foreground">{permissionHint}</p>
               )}
-              <FormRow label="Mode">
+              <FormRow label={t('editPage.permissionModeLabel')}>
                 <PermissionModeField
                   value={draft.mode}
                   onChange={(m) => updateDraft('mode', m)}
                   ignored={ownPermissions}
                 />
               </FormRow>
-              <FormRow label="Allowed tools" hint="green-list — agent can call">
+              <FormRow label={t('editPage.allowedToolsLabel')} hint={t('editPage.allowedToolsHint')}>
                 <ChipsInput
                   values={draft.allowed}
                   onChange={(v) => updateDraft('allowed', v)}
                   tone="allow"
                 />
               </FormRow>
-              <FormRow label="Denied tools" hint="red-list — never call">
+              <FormRow label={t('editPage.deniedToolsLabel')} hint={t('editPage.deniedToolsHint')}>
                 <ChipsInput
                   values={draft.denied}
                   onChange={(v) => updateDraft('denied', v)}
@@ -1406,11 +1417,11 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
               {skills.length > 0 && skillsPreview && <SpawnContext preview={skillsPreview} />}
               {skills.length === 0 ? (
                 <p className="text-[11.5px] text-muted-foreground/70">
-                  No skills installed yet — create some from{' '}
+                  {t('editPage.skillsEmptyBefore')}{' '}
                   <Link href="/skills" className="text-primary">
                     /skills
                   </Link>
-                  .
+                  {t('editPage.skillsEmptyAfter')}
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -1583,11 +1594,11 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
             onClick={remove}
             className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
-            Delete
+            {t('common.delete')}
           </Button>
           <div className="flex-1" />
           <Button onClick={save} disabled={saving || excludingSkill !== null} className="font-semibold">
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </footer>
       </main>
@@ -1671,7 +1682,7 @@ function ChipsInput({
             type="button"
             onClick={() => onChange(values.filter((x) => x !== v))}
             className="text-muted-foreground hover:text-foreground"
-            aria-label="remove"
+            aria-label={t('common.remove')}
           >
             <X className="size-3" />
           </button>
@@ -1688,7 +1699,7 @@ function ChipsInput({
             onChange(values.slice(0, -1));
           }
         }}
-        placeholder="Add tool…  ↵"
+        placeholder={t('editPage.addToolPlaceholder')}
         className="min-w-[140px] flex-1 border-0 bg-transparent text-[12.5px] outline-none placeholder:text-muted-foreground/70"
       />
     </div>
