@@ -18,7 +18,7 @@ import { db, dbApi } from '../../db.js';
 import { forbidden, rejectIfDenied, rejectIfNotDaemonToken, rejectUnlessAny, requestHasPermission, viewerFromRequest } from '../../users/identity.js';
 import { agentAvatarSchema, applyAgentAvatar } from '../../agent-avatar.js';
 import { recordWriteOrigin } from '../../write-origin.js';
-import { GLOBAL_INSTRUCTIONS_FILE } from '../../paths.js';
+import { GLOBAL_INSTRUCTIONS_FILE, expandHome } from '../../paths.js';
 import { GLOBAL_INSTRUCTIONS_MAX_CHARS, readGlobalInstructions, writeGlobalInstructions } from '../../global-instructions.js';
 import { agentConfigRefusal, canonicalizePermissionMode, isPrivilegedCaller, overrideAuthority, promptRewriteRefusal, rejectOverride } from '../../users/privileged-overrides.js';
 import { scopedDb } from '../../users/scoped-db.js';
@@ -169,6 +169,17 @@ function validateCwd(cwd: unknown): void {
   if (!statSync(cwd).isDirectory()) {
     throw new Error(`cwd is not a directory: "${cwd}"`);
   }
+}
+
+/**
+ * `~` is a shell spelling no syscall expands, so a `cwd` typed as `~/Projects`
+ * failed `validateCwd` ("cwd does not exist on the host") and, had it been
+ * stored, would have spawned ENOENT. Writes store the expanded path; the
+ * refusal below then speaks about a path the user recognises.
+ */
+function normalizeCwd<T extends { cwd?: unknown }>(config: T): T {
+  if (typeof config.cwd === 'string' && config.cwd !== '') config.cwd = expandHome(config.cwd);
+  return config;
 }
 
 /** A browser assignment is always checked against the authenticated owner;
@@ -876,6 +887,7 @@ export function registerRoutes(app: express.IRouter): void {
     }
     try {
       validName(body.name!);
+      if (body.config) normalizeCwd(body.config);
       validateCwd(body.config?.cwd);
       validateBrowserAssignment(req, body.name, body.config ?? {});
       if (body.config && 'reports_to' in body.config) {
@@ -973,6 +985,7 @@ export function registerRoutes(app: express.IRouter): void {
       return;
     }
     try {
+      if (body.config) normalizeCwd(body.config);
       if (body.config?.cwd) validateCwd(body.config.cwd);
       const agent = createEphemeralAgent({
         system_prompt: body.system_prompt,
@@ -1140,7 +1153,7 @@ export function registerRoutes(app: express.IRouter): void {
         const icon = agentIconUrlSchema.safeParse(patch.icon_url);
         if (!icon.success) { res.status(400).json({ error: ICON_URL_REFUSAL }); return; }
       }
-      if ('cwd' in patch) validateCwd(patch.cwd);
+      if ('cwd' in patch) { normalizeCwd(patch); validateCwd(patch.cwd); }
       if ('browser_profile_id' in patch || 'project' in patch || 'cwd' in patch) validateBrowserAssignment(req, req.params.name, { ...loadConfig(req.params.name), ...patch });
       // secu-4: same rule as the creation path — a non-superadmin may only
       // narrow what an admin granted to this agent.

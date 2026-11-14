@@ -70,6 +70,21 @@ export const LEGACY_ACCOUNT_TABLES_FILE = join(TIMON_HOME, 'legacy-account-table
 /** Fallback `cwd` of the agents onboarding seeds when the config names no
  *  `workspacesRoot`: inside the Timon home, never the user's home itself. */
 export const WORKSPACE_DIR = join(TIMON_HOME, 'workspace');
+/**
+ * Replaces a leading `~` with the user's home.
+ *
+ * `~` is a shell spelling that no syscall expands: `existsSync` with a path
+ * typed that way looks for a folder literally named `~` and fails, and a `cwd`
+ * stored as typed then spawns ENOENT. Every path a user types (an agent's
+ * `cwd`, a workspace root) goes through this before it is checked or written.
+ * Lives here, not in `config/load.ts`, because `agent-config.ts` needs it too
+ * and must not depend on the config loader.
+ */
+export function expandHome(path: string): string {
+  if (path === '~') return homedir();
+  if (path.startsWith('~/')) return join(homedir(), path.slice(2));
+  return path;
+}
 /** The user's instructions sent to every agent (see `global-instructions.ts`). */
 export const GLOBAL_INSTRUCTIONS_FILE = join(TIMON_HOME, 'global-instructions.md');
 /** Inbound channels (`telegram.json`…), read by the app and by the
