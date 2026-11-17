@@ -638,6 +638,14 @@ function createWindow(url: string, begin: 'service' | 'interface', opening: Wind
     icon: APP_ICON_PATH,
     backgroundColor: windowBackground(scheme),
     autoHideMenuBar: true,
+    // macOS: the interface paints the top of the window itself (the page's own
+    // chrome strip — `html[data-desktop]` in the app's globals.css), so the
+    // native title bar is hidden and its traffic lights float over that strip
+    // instead of sitting on a band of their own. The strip is where the page
+    // keeps its drag handle: see `.timon-topbar-safe` there.
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 16, y: 14 } }
+      : {}),
     // The window's own webContents stays blank under its pages: no preload, no bridge.
     webPreferences: { sandbox: true, nodeIntegration: false, contextIsolation: true },
   });

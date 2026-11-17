@@ -1592,7 +1592,7 @@ export function AgentEditor({ agent, isNew, onClose, onDirtyChange, initialTab }
           </Button>
           <div className="flex-1" />
           <Button onClick={save} disabled={saving || excludingSkill !== null} className="font-semibold">
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </footer>
       </main>

@@ -99,17 +99,22 @@ export function generateTemporaryPassword(): string {
 }
 
 /**
- * True when `encoded` was written with a cost other than the current one (or
- * is not a scrypt hash this module wrote). Call it only after `verifyPassword`
- * succeeded, with the plain password at hand, to store a fresh hash.
+ * `encoded` is typed as `unknown` because it arrives from the
+ * `users.password_hash` TEXT column, which an older driver, a restored dump or
+ * a hand edit can have filled with a BLOB; the row then reads back as a Buffer
+ * and `.split` throws, turning a login into a 500 instead of a refused
+ * credential. A body that is not a string is not a hash this build wrote, so it
+ * fails the check like any other malformed one — never the request.
  */
-export function needsRehash(encoded: string): boolean {
+export function needsRehash(encoded: unknown): boolean {
+  if (typeof encoded !== 'string') return true;
   const parts = encoded.split('$');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return true;
   return Number(parts[1]) !== N || Number(parts[2]) !== R || Number(parts[3]) !== P;
 }
 
-export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
+export async function verifyPassword(password: string, encoded: unknown): Promise<boolean> {
+  if (typeof encoded !== 'string') return false;
   const parts = encoded.split('$');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
   const n = Number(parts[1]);
@@ -170,7 +175,7 @@ export const passwordTiming = {
  */
 export async function verifyAccountPassword(
   password: string,
-  user: { status: string; password_hash: string } | null | undefined,
+  user: { status: string; password_hash: unknown } | null | undefined,
 ): Promise<boolean> {
   if (!user || user.status !== 'active' || !user.password_hash) {
     return passwordTiming.verifyDummy(password);

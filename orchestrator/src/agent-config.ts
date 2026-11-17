@@ -11,7 +11,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { AGENTS_DIR, agentConfig, agentDir, agentSystemPrompt } from './paths.js';
+import { AGENTS_DIR, agentConfig, agentDir, agentSystemPrompt, expandPath } from './paths.js';
 import { agentNameKey, isValidAgentName } from './agent-name.js';
 import type { BackendName } from './backends/types.js';
 import type { AgentRoleId } from './agent-roles.js';
@@ -244,7 +244,12 @@ function agentFolderEntries(): string[] {
 export function loadConfig(agentName: string): AgentConfig {
   const path = agentConfig(canonicalAgentName(agentName));
   if (!existsSync(path)) return {};
-  return JSON.parse(readFileSync(path, 'utf8')) as AgentConfig;
+  const cfg = JSON.parse(readFileSync(path, 'utf8')) as AgentConfig;
+  // A `cwd` typed as `~/Projects` reached the file verbatim before the write
+  // paths expanded it: expanded here, such a config spawns and saves like any
+  // other instead of failing on a folder literally named `~`.
+  if (typeof cfg.cwd === 'string') cfg.cwd = expandPath(cfg.cwd);
+  return cfg;
 }
 
 /**

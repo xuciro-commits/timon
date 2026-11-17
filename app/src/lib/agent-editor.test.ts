@@ -22,7 +22,7 @@ test('agent editor accepts a new name in its dialog and saves agents without inv
   install('React', React);
   const { createRoot } = await import('react-dom/client');
   const { AgentEditorModal, openAgentEditor, closeAgentEditor } = await import('../components/agent-editor/agent-editor-modal');
-  const { getLocale, setLocale } = await import('./i18n');
+  const { getLocale, setLocale, t } = await import('./i18n');
   await import('./i18n-test-locales');
   const previousLocale = getLocale();
   setLocale('en');
@@ -42,9 +42,11 @@ test('agent editor accepts a new name in its dialog and saves agents without inv
   });
   const root = createRoot(document.getElementById('root')!);
   const nameInput = () => document.querySelector<HTMLInputElement>('[role="tabpanel"] input')!;
-  const clickSave = () => React.act(async () => {
-    const button = Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Save');
-    assert.ok(button, 'Save is available');
+  // The label follows the interface language now, so the test asks the same
+  // dictionary the editor reads instead of spelling 'Save' in English.
+  const clickSave = (label: string) => React.act(async () => {
+    const button = Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
+    assert.ok(button, `${label} is available`);
     button.click();
   });
   try {
@@ -68,7 +70,7 @@ test('agent editor accepts a new name in its dialog and saves agents without inv
     await React.act(async () => { releaseCatalogs(); });
     assert.equal(nameInput(), input, 'catalog responses do not remount the input');
     assert.equal(nameInput().value, 'new.agent', 'late catalogs preserve the typed name');
-    await clickSave();
+    await clickSave(t('common.save'));
     assert.equal(posts[0]?.name, 'new.agent', 'Save receives the typed name');
     assert.equal(Object.hasOwn(posts[0]!.config, 'cwd'), false, 'new agent has no invented cwd');
     await React.act(async () => { closeAgentEditor(); });
@@ -77,7 +79,7 @@ test('agent editor accepts a new name in its dialog and saves agents without inv
     assert.equal(nameInput().value, 'Zeus');
     assert.equal(nameInput().getAttribute('aria-label'), 'Nom');
     assert.match(document.querySelector('[role="tabpanel"]')!.textContent!, /affiché dans le graphe et la console/);
-    await clickSave();
+    await clickSave(t('common.save'));
     assert.equal(posts[1]?.name, 'Zeus');
     assert.equal(Object.hasOwn(posts[1]!.config, 'cwd'), false, 'existing agent keeps cwd absent');
   } finally {

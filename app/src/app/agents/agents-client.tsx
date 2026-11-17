@@ -1729,7 +1729,7 @@ export function AgentsClient() {
           {/* Workspace header chip — centered, aligned under the header */}
           <div className="pointer-events-auto relative flex items-center justify-center rounded-xl bg-card/90 px-6 py-2 shadow-elev-1 backdrop-blur-sm">
             <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground">
-              Workspace
+              {i18n('agentsPage.workspace')}
             </span>
           </div>
           {/* Toggles chip */}
@@ -1763,7 +1763,7 @@ export function AgentsClient() {
         </div>
       {/* Mobile pole chips — floating under the topbar */}
         <div className="fixed left-[calc(var(--timon-nav-w)+8px)] top-[calc(var(--timon-topbar-h)+58px)] z-[5] flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card/80 px-1.5 py-1 shadow-lg backdrop-blur md:hidden">
-          <span className="px-1 text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">workspace</span>
+          <span className="px-1 text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">{i18n('agentsPage.workspace')}</span>
           {poleChips.map((w) => (
             <button
               key={w.slug}
@@ -1837,7 +1837,7 @@ export function AgentsClient() {
         ref={readoutRef}
         className="pointer-events-none fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 z-[4] rounded-md bg-card/70 px-2.5 py-1 tabular-nums text-[10.5px] text-muted-foreground backdrop-blur"
       >
-        node graph
+        {i18n('agentsPage.nodeGraph')}
       </div>
 
       {/* Action bar — quick shortcuts above the event stream console.
@@ -1855,7 +1855,7 @@ export function AgentsClient() {
           onClick={() => setShowNewTask(true)}
         >
           <ListTodo className="size-3.5" />
-          New task
+          {i18n('kanbanPage.newTask')}
         </Button>
         <Button size="sm" variant="ghost" className="h-7 shrink-0 gap-1.5 px-2.5 text-[11.5px] font-medium" asChild>
           <Link
@@ -1866,7 +1866,7 @@ export function AgentsClient() {
             }}
           >
             <UserPlus className="size-3.5" />
-            New agent
+            {i18n('editPage.newAgent')}
           </Link>
         </Button>
         {/* Controls of plugins (agent import, export): nothing painted when empty. */}

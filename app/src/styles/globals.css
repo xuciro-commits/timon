@@ -1196,3 +1196,21 @@ html[data-glass-bubbles] .chat-bubble[data-glass-surface='user'][data-glass-visi
 
 .widget-stack > .widget-content > section > header:not(:has(button, a, input)) { display: none; }
 
+
+/* ---------------------------------------------------------------------------
+   The desktop shell (Electron) hides the window's title bar and floats the
+   traffic lights over the page (`titleBarStyle: 'hiddenInset'`, desktop/src/
+   main.ts), so the interface carries that strip itself: the header's safe-area
+   spacer — the notch's height on an iOS home-screen app, zero everywhere else
+   — grows to a macOS title bar, in the bar's own chrome colour, and doubles as
+   the window's drag handle. `data-desktop` comes from the head script in
+   app/layout.tsx, before the first paint.
+
+   Pages with no header (sign-in, the setup wizard) keep the lights over their
+   own background, which is what a hidden title bar does everywhere; nothing is
+   reserved there, so no page loses a strip it did not ask for.
+   --------------------------------------------------------------------------- */
+html[data-desktop] .timon-topbar-safe {
+  height: 32px;
+  -webkit-app-region: drag;
+}

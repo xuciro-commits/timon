@@ -1,0 +1,162 @@
+#!/bin/sh
+# The push gate. `scripts/install-git-hooks.sh` points `core.hooksPath` at this
+# folder, so one command covers every clone.
+#
+# What it refuses, in order:
+#   1. a push whose branch is behind the base it targets — the change would land
+#      on a branch that moved, which is how a rebase or an upstream reset can
+#      swallow work without a word. Run `scripts/sync-push.sh`: it fetches,
+#      integrates (rebase on a branch, merge on the base branch) and pushes;
+#   2. a push with unmerged paths, conflict markers, or a rebase/merge still in
+#      progress;
+#   3. a push whose tree fails the checks CI gates the merge on: `tsc --noEmit`
+#      in the three packages, `scripts/check-portability.mjs --all`, and the
+#      changelog fragments.
+#
+# A refusal writes `.git/push-gate/report-<timestamp>.md` inside the repository:
+# the branch, how far behind it is, the files in conflict, and the tail of each
+# failing command. That file is what an agent (or you, the next morning) reads to
+# pick the work up. Nothing here resolves a conflict by itself: a script that
+# guesses at a conflict is how a rebase drops a commit without saying so.
+#
+# Escape hatches, for a broken runner or a throwaway branch: SKIP_PUSH_GATE=1, or
+# `git push --no-verify`.
+set -eu
+
+if [ "${SKIP_PUSH_GATE:-}" = "1" ]; then
+  echo "push-gate: skipped (SKIP_PUSH_GATE=1)" >&2
+  exit 0
+fi
+
+remote="${1:-origin}"
+git_dir=$(git rev-parse --git-dir)
+report_dir="$git_dir/push-gate"
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)
+
+# The refs git is about to send: `(<local ref>) <local sha> <remote ref> <remote sha>`.
+# An all-zero local sha is a deletion, and carries nothing to check.
+transfers=0
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "${local_sha:-}" in
+    "" | 0000000000000000000000000000000000000000) continue ;;
+  esac
+  transfers=$((transfers + 1))
+done
+[ "$transfers" -gt 0 ] || exit 0
+
+problems=""
+failures=""
+problem() { problems="$problems
+- $1"; }
+
+# 1. An operation still in progress, or a tree that never finished merging.
+if [ -n "$(git ls-files -u 2>/dev/null)" ]; then
+  problem "unmerged paths: $(git ls-files -u | cut -f2 | sort -u | tr '\n' ' ')"
+fi
+if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+  problem "a rebase is in progress"
+fi
+if [ -f "$git_dir/MERGE_HEAD" ]; then
+  problem "a merge is in progress"
+fi
+if git diff --cached --check 2>/dev/null | grep -qi "conflict marker"; then
+  problem "conflict markers are still in the staged change"
+fi
+
+# 2. Behind the base it targets. The fetch can fail (offline): the local check
+# then speaks for a base that may be stale, which is still better than silence.
+base="${PUSH_GATE_BASE:-}"
+if [ -z "$base" ]; then
+  base=$(git symbolic-ref -q "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s#^refs/remotes/$remote/##" || true)
+  [ -n "$base" ] || base=main
+fi
+base_ref="$remote/$base"
+if git fetch --quiet "$remote" --prune 2>/dev/null && git rev-parse --verify -q "$base_ref" >/dev/null 2>&1; then
+  behind=$(git rev-list --count "HEAD..$base_ref")
+  if [ "$behind" -gt 0 ]; then
+    problem "the branch is $behind commit(s) behind $base_ref; run scripts/sync-push.sh, which integrates before it pushes"
+  fi
+else
+  echo "push-gate: could not fetch $remote; checking against the last known $base_ref" >&2
+fi
+
+# 3. The checks CI gates the merge on. They run only when the branch is up to
+# date: on a branch that needs integrating, the result would be about a tree
+# that is going to change anyway.
+if [ -z "$problems" ]; then
+  logs=$(mktemp -d "${TMPDIR:-/tmp}/timon-push-gate.XXXXXX")
+  trap 'rm -rf "$logs"' EXIT INT TERM
+
+  for pkg in orchestrator app desktop; do
+    if [ ! -d "$pkg/node_modules" ]; then
+      echo "push-gate: skipped tsc in $pkg (no node_modules; run npm ci there)" >&2
+      continue
+    fi
+    if ! (cd "$pkg" && npx tsc --noEmit) >"$logs/tsc-$pkg.log" 2>&1; then
+      problem "tsc --noEmit failed in $pkg"
+      failures="$failures
+### tsc --noEmit in $pkg
+
+\`\`\`
+$(tail -20 "$logs/tsc-$pkg.log")
+\`\`\`
+"
+    fi
+  done
+
+  if ! node scripts/check-portability.mjs --all >"$logs/portability.log" 2>&1; then
+    problem "scripts/check-portability.mjs --all failed"
+    failures="$failures
+### scripts/check-portability.mjs --all
+
+\`\`\`
+$(tail -20 "$logs/portability.log")
+\`\`\`
+"
+  fi
+
+  if ! node scripts/changelog-fragments.mjs --check >"$logs/fragments.log" 2>&1; then
+    problem "the changelog fragments do not validate"
+    failures="$failures
+### scripts/changelog-fragments.mjs --check
+
+\`\`\`
+$(tail -20 "$logs/fragments.log")
+\`\`\`
+"
+  fi
+fi
+
+[ -z "$problems" ] && exit 0
+
+# Keep the report: it is the hand-over to whoever — or whatever — resolves this.
+mkdir -p "$report_dir"
+report="$report_dir/report-$(date +%Y%m%d-%H%M%S).md"
+{
+  echo "# Push refused: $branch → $remote"
+  echo
+  echo "- date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "- branch: $branch"
+  echo "- base: ${base_ref:-unknown}"
+  echo "- HEAD: $(git rev-parse --short HEAD 2>/dev/null || echo none)"
+  echo
+  echo "## What stops it"
+  echo "$problems"
+  if [ -n "$failures" ]; then
+    echo
+    echo "## Failing output"
+    echo "$failures"
+  fi
+  echo
+  echo "## Next"
+  echo
+  echo "Resolve the conflict or the failing check, commit, then run \`scripts/sync-push.sh\`."
+  echo "If a rebase or merge was aborted, the conflicted files are listed above but the"
+  echo "working tree is back at HEAD; re-run \`git rebase $base_ref\` (or \`git merge $base_ref\`)"
+  echo "and read the markers file by file — never let a tool settle them unread."
+} >"$report"
+
+echo "push-gate: refused — $branch is not ready to leave" >&2
+echo "$problems" >&2
+echo "push-gate: written to $report" >&2
+exit 1
